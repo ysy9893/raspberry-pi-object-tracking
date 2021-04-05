@@ -6,8 +6,7 @@ def NMS(boxes,classes, probs, overlapThresh,imH,imW):
 	if len(boxes) == 0:
 		return []
 
-	# if the bounding boxes are integers, convert them to floats -- this
-	# is important since we'll be doing a bunch of divisions
+	# For the bunch of division, the type of elements in bbox should be converterd to float 
 	if boxes.dtype.kind == "i":
 		boxes = boxes.astype("float")
 
@@ -32,7 +31,8 @@ def NMS(boxes,classes, probs, overlapThresh,imH,imW):
 	# compute the area of the bounding boxes and grab the indexes to sort
 	# (in the case that no probabilities are provided, simply sort on the
 	# bottom-left y-coordinate)
-	area = (x2 - x1+1) * (y2 - y1+1)
+	area = (x2 - x1+1) * (y2 - y1+1)#By adding 1, we can prevent multiplication on floating point numbers. 
+	
 	idxs = y2.copy()
 
 	# if probabilities are provided, sort on them instead
@@ -41,14 +41,15 @@ def NMS(boxes,classes, probs, overlapThresh,imH,imW):
 	
 	#이미지 내 바운딩박스마다 가지고 있는 confidence score을 이용해서 
 	#confidnece score를 기준으로 오름차순으로 정렬한다. 
-	idxs = np.argsort(idxs)
-
+	idxs = np.argsort(idxs)#index로 저장되어 있다. 
+	
+	print(idxs)
 	# keep looping while some indexes still remain in the indexes list
 	while len(idxs) > 0:
 		# grab the last index in the indexes list and add the index value
 		# to the list of picked indexes
 		last = len(idxs) - 1
-		i = idxs[last]#i는 probs,x1,y1,x2,y2의 특정 값 가리키는 index이다.
+		i = idxs[last]#i는 특정 (x1,y1,x2,y2)박스의 confidence값을 가리키는 index이다.
 		pick.append(i)# confidence score 중 가장 큰 값을 리스트에 추가한다. 
 
 		# find the largest (x, y) coordinates for the start of the bounding
