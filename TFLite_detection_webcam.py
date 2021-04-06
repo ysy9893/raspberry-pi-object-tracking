@@ -17,6 +17,8 @@ import importlib.util
 import imutils
 from imutils.video import VideoStream
 from nms import NMS
+from motpy import Detection, MultiObjectTracker
+
 #####################################################################################
 #####################################################################################
 ## Define and parse input arguments
@@ -30,7 +32,7 @@ parser.add_argument('--labels', help='Name of the labelmap file, if different th
 parser.add_argument('--threshold', help='Minimum confidence threshold for displaying detected objects',
                     default=0.5)
 parser.add_argument('--resolution', help='Desired webcam resolution in WxH. If the webcam does not support the resolution entered, errors may occur.',
-                    default='640x480')
+                    default='700x700')
 parser.add_argument('--edgetpu', help='Use Coral Edge TPU Accelerator to speed up detection',
                     action='store_true')
 
@@ -124,6 +126,9 @@ freq = cv2.getTickFrequency()#Return clock cycle per second
 #webcam1=VideoStream(usePicamera=True).start()
 webcam2=VideoStream(src=0).start()
 
+##Initialize Tracker 
+tracker=MultiObjectTracker(dt=0.1) #100ms
+
 ##Get video stream feeds 
 while True:
 
@@ -140,7 +145,6 @@ while True:
 
     # Acquire frame and resize to expected shape [1xHxWx3]
     frame = frame1.copy()
-    print(frame.shape)
     frame_resized = cv2.resize(frame, (width, height))
     input_data = np.expand_dims(frame_resized, axis=0)
 
@@ -162,18 +166,42 @@ while True:
     
     
     ##Non Maximum Suppression 
-    #boxes,scores,classe=NMS(boxes,classes,scores,0.2,imH,imW)
+    boxes,scores,classe=NMS(boxes,classes,scores,0.5,imH,imW)
+    
+    ############################# Configuration for Tracking ##########################################
+    boxes=np.array(boxes)#current col order is [ymin,xmin,ymax,ymin]
+    print(boxes)
+    #Change the order of cols to [xmin,ymin,xmax,ymax] which is suitable feature of feed for tracker
+    xmin=boxes[:,1]*imW
+    xmin[xmin<1]=1
+    xmin=xmin.reshape((-1,1))
+    ymin=boxes[:,0]*imH
+    ymin[ymin<1]=1
+    ymin=ymin.reshape((-1,1))
+    xmax=boxes[:,3]*imW
+    xmax[xmax>imW]=imW
+    xmax=xmax.reshape((-1,1))
+    ymax=boxes[:,2]*imH
+    ymax[ymax>imH]=imH
+    ymax=ymax.reshape((-1,1))
+    
+    boxes=np.concatenate((xmin,ymin,xmax,ymax),axis=1)
+    
+    print(boxes)
+    ###################################################################################################
+    
     # Loop over all detections and draw detection box if confidence is above minimum threshold
     for i in range(len(scores)):
         if ((scores[i] > min_conf_threshold) and (scores[i] <= 1.0)):
 
             # Get bounding box coordinates and draw box
             # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
-            ymin = int(max(1,(boxes[i][0] * imH)))
-            xmin = int(max(1,(boxes[i][1] * imW)))
-            ymax = int(min(imH,(boxes[i][2] * imH)))
-            xmax = int(min(imW,(boxes[i][3] * imW)))
+            xmin = int(max(1,(boxes[i][0])))
+            ymin = int(max(1,(boxes[i][1])))
+            xmax = int(min(imH,(boxes[i][2])))
+            ymax = int(min(imW,(boxes[i][3])))
             
+            frame=cv2.resize(frame,(imW,imH))
             cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
 
             # Draw label
@@ -184,6 +212,7 @@ while True:
             cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
             cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
 
+    
     # Draw framerate in corner of frame
     cv2.putText(frame,'FPS: {0:.2f}'.format(frame_rate_calc),(30,50),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)
 
