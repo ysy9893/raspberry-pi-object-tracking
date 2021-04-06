@@ -9,7 +9,7 @@ Implementation of object tracking on raspberry pi using Mobilenet SSD, NMS funct
 ### 3. Object tracking using motpy library 
 
 __Original project's result__
-<img width="100%" scr='videos/raw_video.gif">
+<img width="100%" scr='video/raw_video.gif">
 
 
 
