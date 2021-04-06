@@ -125,7 +125,7 @@ freq = cv2.getTickFrequency()#Return clock cycle per second
 
 #webcam1=VideoStream(usePicamera=True).start()
 webcam2=VideoStream(src=0).start()
-
+#webcam1=VideoStream(usePicamera=True).start()
 ##Initialize Tracker 
 tracker=MultiObjectTracker(dt=0.1) #100ms
 
@@ -139,7 +139,6 @@ while True:
     
     #frame1,frame2= webcam1.read(),webcam2.read()
     frame1=webcam2.read()
-    #frame1=np.concatenate((frame1,frame2),axis=1)
     #frame1=cv2.hconcat([frame1,frame2])
 
 
@@ -166,11 +165,11 @@ while True:
     
     
     ##Non Maximum Suppression 
-    boxes,scores,classe=NMS(boxes,classes,scores,0.5,imH,imW)
+    boxes,scores,classes=NMS(boxes,classes,scores,0.5,imH,imW)
+
     
     ############################# Configuration for Tracking ##########################################
     boxes=np.array(boxes)#current col order is [ymin,xmin,ymax,ymin]
-    print(boxes)
     #Change the order of cols to [xmin,ymin,xmax,ymax] which is suitable feature of feed for tracker
     xmin=boxes[:,1]*imW
     xmin[xmin<1]=1
@@ -186,27 +185,39 @@ while True:
     ymax=ymax.reshape((-1,1))
     
     boxes=np.concatenate((xmin,ymin,xmax,ymax),axis=1)
+    boxes=[i for idx,i in enumerate(boxes) if scores[idx]>min_conf_threshold and scores[idx]<=1.0]
+    classes=[i for idx,i in enumerate(classes) if scores[idx]>min_conf_threshold and scores[idx]<=1.0]
+    scores=[i for i in scores if i >min_conf_threshold and i<=1.0]
     
-    print(boxes)
+    print(classes)
+    ##Tracking 
+    detections=[Detection(box=bbox,score=sc,cl=cl) for bbox, sc, cl in zip(boxes,scores,classes)]
+    tracker.step(detections)
+    tracks=tracker.active_tracks()
+    
+
     ###################################################################################################
     
-    # Loop over all detections and draw detection box if confidence is above minimum threshold
-    for i in range(len(scores)):
-        if ((scores[i] > min_conf_threshold) and (scores[i] <= 1.0)):
+    # Loop over all tracks and draw detection box if confidence is above minimum threshold
+    for track in tracks:
+        
+        if True:
 
             # Get bounding box coordinates and draw box
             # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
-            xmin = int(max(1,(boxes[i][0])))
-            ymin = int(max(1,(boxes[i][1])))
-            xmax = int(min(imH,(boxes[i][2])))
-            ymax = int(min(imW,(boxes[i][3])))
+            
+            xmin = int(track.box[0])
+            ymin = int(track.box[1])
+            xmax = int(track.box[2])
+            ymax = int(track.box[3])
             
             frame=cv2.resize(frame,(imW,imH))
             cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
 
             # Draw label
-            object_name = labels[int(classes[i])] # Look up object name from "labels" array using class index
-            label = '%s: %d%%' % (object_name, int(scores[i]*100)) # Example: 'person: 72%'
+            print(track.cl)
+            object_name = labels[int(track.cl)]
+            label = '%s: %s%%' % (object_name, str(int(track.score))) # Example: 'person: 72%'
             labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2) # Get font size
             label_ymin = max(ymin, labelSize[1] + 10) # Make sure not to draw label too close to top of window
             cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
@@ -224,10 +235,12 @@ while True:
     time1 = (t2-t1)/freq
     frame_rate_calc= 1/time1
 
-    # Press 'q' to quit
-    if cv2.waitKey(1) == ord('q'):
-        break
+    #Press 'ESC' to quit 
+    k=cv2.waitKey(30) &0xff
+    if k==27:
+        break 
 
 # Clean up
 cv2.destroyAllWindows()
 imutils.stop()
+
