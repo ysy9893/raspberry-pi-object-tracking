@@ -10,7 +10,7 @@ Implementation of object tracking on raspberry pi using Mobilenet SSD, NMS funct
 
 __Original project's result__   
 
-<img width="100%" src="raspberry-pi-object-tracking/video/raw_video.gif">
+<img width="50%" src="raspberry-pi-object-tracking/video/raw_video.gif">
 
 
 
