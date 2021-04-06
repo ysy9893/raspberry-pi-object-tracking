@@ -3,10 +3,15 @@
 Implementation of object tracking on raspberry pi using Mobilenet SSD, NMS function, and traking library.
 
 
-This project is composed of three parts
-1. Object Detection on Raspberry Pi using tensorflow lite Mobilenet SSD 
-2. Non Maximum Suppression on outputs of Mobilenet SSD 
-3. Object tracking using motpy library 
+## This project is composed of three parts
+### 1. Object Detection on Raspberry Pi using tensorflow lite Mobilenet SSD 
+### 2. Non Maximum Suppression on outputs of Mobilenet SSD 
+### 3. Object tracking using motpy library 
+
+__Original project's result__
+<img width="100%" scr='videos/raw_video.gif">
+
+
 
 Credited by 
 Object detection : https://github.com/EdjeElectronics/TensorFlow-Lite-Object-Detection-on-Android-and-Raspberry-Pi/blob/master/Raspberry_Pi_Guide.md
