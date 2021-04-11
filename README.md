@@ -49,11 +49,19 @@ It is because of untrimmed boxes which is duplicated and the flickering box on t
 
 To address such problems, I employed Non Maximum Suppression function and a tracking library.    
 
-More details about Non Maximum Suppression are stated in this link :   
+More details about Non Maximum Suppression are stated in this link : https://whatdhack.medium.com/reflections-on-non-maximum-suppression-nms-d2fce148ef0a     
 
-More details about the kalman filter are stated in this link:   
+More details about the kalman filter are stated in this link: https://kr.mathworks.com/videos/introduction-to-kalman-filters-for-object-tracking-79674.html       
 
-##### 3. Non Maximum Suppression on outputs of Mobilenet SSD    
+##### 2. Non Maximum Suppression on outputs of Mobilenet SSD    
+I wrote a script nms.py that implement Non Maximum Suppression next to main.py! It could be used as module by simply importing NMS from nms.py!
 
-##### 5. Object tracking using motpy library 
+
+```python
+from nms import NMS
+
+```
+
+
+##### 3. Object tracking using motpy library 
 
