@@ -204,7 +204,7 @@ Add class id to an output track tuple accordingly.
 # Track is meant as an output from the object tracker
 Track = collections.namedtuple('Track', 'id box score cl')
 ```
-Add class parameter to an Tracker class arguments.
+Add class parameter to an Tracker class arguments.(motpy/tracker.py)
 ```python
  def __init__(
             self,
@@ -232,7 +232,7 @@ Add class parameter to an Tracker class arguments.
         self.feature = None
         self.cl=class0
 ```
-Pass class parameter when creating new tracker (active_tracks function)
+Pass class parameter when creating new tracker (active_tracks function) (motpy/tracker.py)
 
 ```python
 def active_tracks(self,
@@ -252,7 +252,7 @@ def active_tracks(self,
 	logger.debug('active/all tracks: %d/%d' % (len(self.trackers), len(tracks)))
         return tracks
 ```
-Update class info accordingly when updating scores and tracker!
+Update class info accordingly when updating scores and tracker!(motpy/tracker.py)
 ```python
 def update(self, detection: Detection):
         self.steps_positive += 1
@@ -267,7 +267,7 @@ def update(self, detection: Detection):
     #self.feature = self.update_feature_fn(old=self.feature, new=detection.feature)
 ```
 
-4. Modify multiObjectTracker class's step function (step())    
+4. Modify multiObjectTracker class's step function (step()) (motpy/tracker.py)    
 Step() function is really integral component for tracking. 
 It matches new detections with existing trackers, creates new trackers if necessary and performs the cleanup. 
 
@@ -307,7 +307,32 @@ self.cleanup_trackers()
         
 return self.active_tracks(**self.active_tracks_kwargs)
 ```
+5. Utilize output of tracking 
+```python
+ for track in tracks:
+        
+        if True:
 
+            # Get bounding box coordinates and draw box
+            # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
+            
+            xmin = int(track.box[0])
+            ymin = int(track.box[1])
+            xmax = int(track.box[2])
+            ymax = int(track.box[3])
+            
+            frame=cv2.resize(frame,(imW,imH))
+            cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
+
+            # Draw label
+            object_name = labels[int(track.cl)]
+            label = '%s: %s%%' % (object_name, str(float(track.score))) # Example: 'person: 72%'
+            labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2) # Get font size
+            label_ymin = max(ymin, labelSize[1] + 10) # Make sure not to draw label too close to top of window
+            cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
+            cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
+
+```
 
 
 
