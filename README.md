@@ -132,7 +132,6 @@ while len(idxs)>0:
 <img src="images/ppt2.jpg"  width="700" height="350">
 <img src="images/ppt3.jpg"  width="700" height="350">
 <img src="images/ppt4.jpg"  width="700" height="350">
-출처: https://cutemoomin.tistory.com/112 [무민은귀여워]
 
 - Return chosen boxes, confidence scores, classes 
 ```python
@@ -143,3 +142,5 @@ return boxes[pick], probs[pick], classes[pick]
 
 ##### 3. Object tracking using motpy library 
 
+I had made a vast amount of changes to original motpty library!
+Modified codes would be described later! (Maybe on April 17?)
