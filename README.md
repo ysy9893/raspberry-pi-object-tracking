@@ -155,21 +155,21 @@ Before running tracking algorithm, we have to adjust some variables to be used a
 [ymin,xmin,ymax,ymin]
 
 - Change the order of columns to [xmin,ymin,xmax,ymax] widely used format which is suitable feed for tracker 
-
+- Also, you have to make sure that coordinates of all detected boxes should be within the image's pixel values. 
 
 ```python
 #Denormalize and concatenate all columns
 xmin=boxes[:,1]*imW 
-xmin[xmin<1]=1
+xmin[xmin<1]=1 #if the x1-value is lower than 1, assign it 1
 xmin=xmin.reshape((-1,1))
 ymin=boxes[:,0]*imH
-ymin[ymin<1]=1
+ymin[ymin<1]=1 #if the y1-value is lower than 1, assign it 1
 ymin=ymin.reshape((-1,1))
 xmax=boxes[:,3]*imW
-xmax[xmax>imW]=imW
+xmax[xmax>imW]=imW #if the x2-value is greater than width of image, assign it width of image
 xmax=xmax.reshape((-1,1))
 ymax=boxes[:,2]*imH
-ymax[ymax>imH]=imH
+ymax[ymax>imH]=imH #if the y2-value is greater than height of image, assign it height of image
 ymax=ymax.reshape((-1,1))
     
 boxes=np.concatenate((xmin,ymin,xmax,ymax),axis=1)
@@ -314,7 +314,6 @@ return self.active_tracks(**self.active_tracks_kwargs)
         if True:
 
             # Get bounding box coordinates and draw box
-            # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
             
             xmin = int(track.box[0])
             ymin = int(track.box[1])
