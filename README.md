@@ -61,6 +61,17 @@ I wrote a script nms.py that implement Non Maximum Suppression next to main.py! 
 from nms import NMS
 
 ```
+There are multiple modifications I made to adjust the script to be perfectly compatible with main codes. 
+
+- Additional parameters 
+The original script's nms function only takes bounding boxes(on a single image), overlapThresh, and the size of image as parameters. In our case, however, we need classes and confidence scores info for each bounding boxes. 
+```python
+def NMS(boxes,classes, probs, overlapThresh,imH,imW) #nms.py
+```
+```python
+boxes,scores,classes=NMS(boxes,classes,scores,0.5,imH,imW)
+```
+- 
 
 
 ##### 3. Object tracking using motpy library 
