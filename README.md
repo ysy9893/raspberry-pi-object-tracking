@@ -151,7 +151,7 @@ Modified codes would be described below.
 1. Configurations for Tracking (main.py)
 Before running tracking algorithm, we have to adjust some variables to be used as input of tracker!
 
-The format of bbox(order of columns) after applying non maximum suppression is   
+- The format of bbox(order of columns) after applying non maximum suppression is   
 [ymin,xmin,ymax,ymin]
 
 - Change the order of columns to [xmin,ymin,xmax,ymax] widely used format which is suitable feed for tracker 
@@ -199,12 +199,12 @@ The original tracking code only returns bbox and score. To know what detected ob
         self.score = score
         self.cl = cl
 ```
-Add class id to an output track tuple accordingly. 
+- Add class id to an output track tuple accordingly. 
 ```python
 # Track is meant as an output from the object tracker
 Track = collections.namedtuple('Track', 'id box score cl')
 ```
-Add class parameter to an Tracker class arguments.(motpy/tracker.py)
+- Add class parameter to an Tracker class arguments.(motpy/tracker.py)
 ```python
  def __init__(
             self,
@@ -232,7 +232,7 @@ Add class parameter to an Tracker class arguments.(motpy/tracker.py)
         self.feature = None
         self.cl=class0
 ```
-Pass class parameter when creating new tracker (active_tracks function) (motpy/tracker.py)
+- Pass class parameter when creating new tracker (active_tracks function) (motpy/tracker.py)
 
 ```python
 def active_tracks(self,
@@ -252,7 +252,7 @@ def active_tracks(self,
 	logger.debug('active/all tracks: %d/%d' % (len(self.trackers), len(tracks)))
         return tracks
 ```
-Update class info accordingly when updating scores and tracker!(motpy/tracker.py)
+- Update class info accordingly when updating scores and tracker!(motpy/tracker.py)
 ```python
 def update(self, detection: Detection):
         self.steps_positive += 1
@@ -271,7 +271,7 @@ def update(self, detection: Detection):
 Step() function is really integral component for tracking. 
 It matches new detections with existing trackers, creates new trackers if necessary and performs the cleanup. 
 
-Let's look into codes one by one
+- Let's look into codes one by one
 ```python
 #Delete detection if it contains empty bbox
 detections = [det for det in detections if det.box is not None]
