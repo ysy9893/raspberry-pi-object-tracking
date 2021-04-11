@@ -51,7 +51,10 @@ To address such problems, I employed Non Maximum Suppression function and a trac
 
 More details about Non Maximum Suppression are stated in this link : https://whatdhack.medium.com/reflections-on-non-maximum-suppression-nms-d2fce148ef0a     
 
-More details about the kalman filter are stated in this link: https://kr.mathworks.com/videos/introduction-to-kalman-filters-for-object-tracking-79674.html       
+More details about the kalman filter are stated in this link: https://kr.mathworks.com/videos/introduction-to-kalman-filters-for-object-tracking-79674.html    
+
+In fact, there're some changes compared to original codes! 
+For example, instead of using video instances by creting Video classes run by multi-threads, I'd just imported imutils video module to use videostream class. By using this library, codes are simplified. 
 
 ##### 2. Non Maximum Suppression on outputs of Mobilenet SSD    
 I wrote a script nms.py that implement Non Maximum Suppression next to main.py! It could be used as module by simply importing NMS from nms.py!
@@ -143,4 +146,168 @@ return boxes[pick], probs[pick], classes[pick]
 ##### 3. Object tracking using motpy library 
 
 I had made a vast amount of changes to original motpty library!
-Modified codes would be described later! (Maybe on April 17?)
+Modified codes would be described below. 
+
+1. Configurations for Tracking (main.py)
+Before running tracking algorithm, we have to adjust some variables to be used as input of tracker!
+
+The format of bbox(order of columns) after applying non maximum suppression is   
+[ymin,xmin,ymax,ymin]
+
+- Change the order of columns to [xmin,ymin,xmax,ymax] widely used format which is suitable feed for tracker 
+
+
+```python
+#Denormalize and concatenate all columns
+xmin=boxes[:,1]*imW 
+xmin[xmin<1]=1
+xmin=xmin.reshape((-1,1))
+ymin=boxes[:,0]*imH
+ymin[ymin<1]=1
+ymin=ymin.reshape((-1,1))
+xmax=boxes[:,3]*imW
+xmax[xmax>imW]=imW
+xmax=xmax.reshape((-1,1))
+ymax=boxes[:,2]*imH
+ymax[ymax>imH]=imH
+ymax=ymax.reshape((-1,1))
+    
+boxes=np.concatenate((xmin,ymin,xmax,ymax),axis=1)
+```
+- Filter out boxes whose confidence score is lower than specified confidence score threshold
+```python
+boxes=[i for idx,i in enumerate(boxes) if scores[idx]>min_conf_threshold and scores[idx]<=1.0]
+classes=[i for idx,i in enumerate(classes) if scores[idx]>min_conf_threshold and scores[idx]<=1.0]
+scores=[i for i in scores if i >min_conf_threshold and i<=1.0]
+```
+2. Run tracking algorithm (main.py)
+```python
+detections=[Detection(box=bbox,score=sc,cl=cl) for bbox, sc, cl in zip(boxes,scores,classes)]
+tracker.step(detections)#implementing tracking 
+tracks=tracker.active_tracks() #return tracked objects 
+```
+3. Add arguments(parameter)(motpy/core.py)
+The original tracking code only returns bbox and score. To know what detected object is, class information has to be specified. 
+
+```python
+ def __init__(
+            self,
+            box: Box,
+            score: Optional[float] = None,
+            cl: Optional[float] = None):
+        self.box = box
+        self.score = score
+        self.cl = cl
+```
+Add class id to an output track tuple accordingly. 
+```python
+# Track is meant as an output from the object tracker
+Track = collections.namedtuple('Track', 'id box score cl')
+```
+Add class parameter to an Tracker class arguments.
+```python
+ def __init__(
+            self,
+            model_spec: dict = DEFAULT_MODEL_SPEC,
+            dt: float = 1 / 24,
+            x0: Optional[Vector] = None,
+            box0: Optional[Box] = None,
+            score0: float=None,
+            class0: float=None,
+            max_staleness: float = 12.0,
+            smooth_score_gamma: float = 0.8,
+            smooth_feature_gamma: float = 0.9):
+        self.id = str(uuid.uuid4())
+        self.model_spec = model_spec
+
+        self.steps_alive = 1
+        self.steps_positive = 1
+        self.staleness = 0.0
+        self.max_staleness = max_staleness
+
+        self.update_score_fn = exponential_moving_average_fn(smooth_score_gamma)
+        self.update_feature_fn = exponential_moving_average_fn(smooth_feature_gamma)
+
+        self.score = score0
+        self.feature = None
+        self.cl=class0
+```
+Pass class parameter when creating new tracker (active_tracks function)
+
+```python
+def active_tracks(self,
+                      max_staleness_to_positive_ratio: float = 3.0,
+                      max_staleness: float = 999,
+                      min_steps_alive: int = -1) -> Sequence[Track]:
+        """ returns all active tracks after optional filtering by tracker steps count and staleness """
+
+        tracks = []
+        for tracker in self.trackers:
+            cond1 = tracker.staleness / tracker.steps_positive < max_staleness_to_positive_ratio  # early stage
+            cond2 = tracker.staleness < max_staleness
+            cond3 = tracker.steps_alive >= min_steps_alive
+            if cond1 and cond2 and cond3:
+                tracks.append(Track(id=tracker.id, box=tracker.box, score=tracker.score,
+                                    cl=tracker.cl))
+	logger.debug('active/all tracks: %d/%d' % (len(self.trackers), len(tracks)))
+        return tracks
+```
+Update class info accordingly when updating scores and tracker!
+```python
+def update(self, detection: Detection):
+        self.steps_positive += 1
+
+    # KF tracker update for position and size
+    z = self.model.box_to_z(detection.box)
+    self._tracker.update(z)
+        
+    self.cl=detection.cl
+
+    self.score = self.update_score_fn(old=self.score, new=detection.score)
+    #self.feature = self.update_feature_fn(old=self.feature, new=detection.feature)
+```
+
+4. Modify multiObjectTracker class's step function (step())    
+Step() function is really integral component for tracking. 
+It matches new detections with existing trackers, creates new trackers if necessary and performs the cleanup. 
+
+Let's look into codes one by one
+```python
+#Delete detection if it contains empty bbox
+detections = [det for det in detections if det.box is not None]
+
+logger.debug('step with %d detections' % len(detections))
+#Matching btw previously tracked objects and newly detected objects 
+matches = self.matching_fn(self.trackers, detections)
+logger.debug('matched %d pairs' % len(matches))
+
+# all trackers: predict
+for t in self.trackers:
+    t.predict() #predict coordinates of bbox
+    
+# assigned trackers: correct
+for match in matches:
+    track_idx, det_idx = match[0], match[1]
+    self.trackers[track_idx].update(detection=detections[det_idx])
+
+# not assigned detections: create new trackers POF
+assigned_det_idxs = set(matches[:, 1]) if len(matches) > 0 else []
+for det_idx in set(range(len(detections))).difference(assigned_det_idxs):
+    tracker= Tracker(box0=detections[det_idx].box,score0=detections[det_idx].score,
+                              class0=detections[det_idx].cl,
+                              model_spec=self.model_spec,
+                              **self.tracker_kwargs)
+            self.trackers.append(tracker)
+# unassigned trackers
+assigned_track_idxs = set(matches[:, 0]) if len(matches) > 0 else []
+for track_idx in set(range(len(self.trackers))).difference(assigned_track_idxs):
+            self.trackers[track_idx].stale()
+# cleanup dead trackers
+self.cleanup_trackers()
+        
+return self.active_tracks(**self.active_tracks_kwargs)
+```
+
+
+
+
