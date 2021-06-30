@@ -41,7 +41,7 @@ You have to refer the original project's tutorial to setup an environment for ob
 
 If you followed all the steps from the original project's tutorial, you would see the result like below.    
 
-![sample](videos/result.gif)   
+![sample](videos/result_video.gif)   
 
 We can see the real time object detection in action, however, it's not what you've expected. 
 
